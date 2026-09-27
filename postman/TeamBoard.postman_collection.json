@@ -1,0 +1,293 @@
+{
+  "info": {
+    "name": "TeamBoard",
+    "description": "TeamBoard API. Run Register, then the client requests. For the admin usage request, set that company's role to admin in pgAdmin (or the Django shell), log in again, then send Usage summary as admin.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://127.0.0.1:8000"},
+    {"key": "token", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "Register company — 201",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('returns api key and access token', function () {",
+              "    pm.expect(body.api_key).to.be.a('string').and.not.empty;",
+              "    pm.expect(body.access).to.be.a('string').and.not.empty;",
+              "    pm.expect(body.company_name).to.eql('Acme Corp');",
+              "});",
+              "pm.collectionVariables.set('token', body.access);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"acmecorp\",\n  \"password\": \"securepass123\",\n  \"company_name\": \"Acme Corp\",\n  \"email\": \"dev@acmecorp.com\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/register/"
+      }
+    },
+    {
+      "name": "Register duplicate username — 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"acmecorp\",\n  \"password\": \"securepass123\",\n  \"company_name\": \"Acme Corp\",\n  \"email\": \"dev@acmecorp.com\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/register/"
+      }
+    },
+    {
+      "name": "Login — 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('returns access, company name, and api key', function () {",
+              "    pm.expect(body.access).to.be.a('string').and.not.empty;",
+              "    pm.expect(body.company_name).to.eql('Acme Corp');",
+              "    pm.expect(body.api_key).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.collectionVariables.set('token', body.access);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"acmecorp\",\n  \"password\": \"securepass123\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/login/"
+      }
+    },
+    {
+      "name": "Login invalid credentials — 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"acmecorp\",\n  \"password\": \"wrong-password\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/login/"
+      }
+    },
+    {
+      "name": "Query knowledge base without token — 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"search\": \"select_related\"\n}"
+        },
+        "url": "{{baseUrl}}/api/kb/query/"
+      }
+    },
+    {
+      "name": "Query knowledge base — 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('returns matching entries', function () {",
+              "    pm.expect(body.count).to.be.above(0);",
+              "    pm.expect(body.results).to.be.an('array').that.is.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"search\": \"select_related\"\n}"
+        },
+        "url": "{{baseUrl}}/api/kb/query/"
+      }
+    },
+    {
+      "name": "Query knowledge base blank search — 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"search\": \"\"\n}"
+        },
+        "url": "{{baseUrl}}/api/kb/query/"
+      }
+    },
+    {
+      "name": "Query knowledge base no matches — 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('empty results are still a successful query', function () {",
+              "    pm.expect(body.count).to.eql(0);",
+              "    pm.expect(body.results).to.eql([]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"search\": \"no-such-topic\"\n}"
+        },
+        "url": "{{baseUrl}}/api/kb/query/"
+      }
+    },
+    {
+      "name": "Usage summary as client — 403",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 403', function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/api/admin/usage-summary/"
+      }
+    },
+    {
+      "name": "Usage summary without token — 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/admin/usage-summary/"
+      }
+    },
+    {
+      "name": "Usage summary as admin — 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('returns usage totals', function () {",
+              "    pm.expect(body.total_queries).to.be.a('number');",
+              "    pm.expect(body.active_companies).to.be.a('number');",
+              "    pm.expect(body.top_search_terms).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/api/admin/usage-summary/",
+        "description": "Promote the company first, then log in again so {{token}} belongs to an admin. In psql or pgAdmin set api_company.role to 'admin' for acmecorp, or run: python manage.py shell -c \"from django.contrib.auth.models import User; c=User.objects.get(username='acmecorp').company; c.role='admin'; c.save()\""
+      }
+    }
+  ]
+}
